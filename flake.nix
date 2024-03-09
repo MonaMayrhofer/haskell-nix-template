@@ -13,22 +13,32 @@
       imports = [
         inputs.devenv.flakeModule
       ];
-      perSystem = {pkgs, ...}: {
-        devenv.shells.default = let
-          haskell = pkgs.haskell.packages.ghc92.override {
-            overrides = final: prev: {
-              haskell-nix-template = prev.callPackage ./haskell-nix-template.nix {};
-            };
+      perSystem = {pkgs, ...}: let
+        haskell = pkgs.haskell.packages.ghc92.override {
+          overrides = _: prev: {
+            haskell-nix-template = prev.callPackage ./haskell-nix-template.nix {};
           };
+        };
+      in {
+        packages.default = haskell.haskell-nix-template;
 
+        devenv.shells.default = let
           hpackages = p: with p.haskell-nix-template.getCabalDeps; libraryHaskellDepends ++ executableHaskellDepends ++ testHaskellDepends;
           ghcCompiler = haskell.ghc.withHoogle hpackages;
         in {
           packages = [
-            ghcCompiler
-            pkgs.haskellPackages.cabal-install
             pkgs.cabal2nix
           ];
+
+          processes = {
+            hoogle.exec = "hoogle server --local -p 9090";
+          };
+
+          languages.haskell = {
+            enable = true;
+            package = ghcCompiler;
+            stack = null;
+          };
         };
       };
     };
